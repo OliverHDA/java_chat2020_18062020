@@ -1,12 +1,14 @@
 package server;
 
+import database.DatabaseConnection;
 
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.List;
 import java.util.Vector;
-
 
 public class Server {
     private List<ClientHandler> clients;
@@ -45,6 +47,10 @@ public class Server {
         for (ClientHandler c : clients) {
             c.sendMsg(nick + ": " + msg);
         }
+        Date date = new Date();
+        SimpleDateFormat pattern = new SimpleDateFormat("dd.MM 'at' HH:mm");
+        String stringDate = pattern.format(date);
+        DatabaseConnection.addBroadcastMessage(nick, msg, stringDate);
     }
 
     public void privateMsg(ClientHandler sender, String receiver, String msg) {
@@ -56,6 +62,12 @@ public class Server {
                 c.sendMsg(message);
                 if (!sender.getNick().equals(receiver)) {
                     sender.sendMsg(message);
+
+                    Date date = new Date();
+                    SimpleDateFormat pattern = new SimpleDateFormat("dd.MM 'at' HH:mm");
+                    String stringDate = pattern.format(date);
+                    DatabaseConnection.privateMessage(sender.getNick(), receiver, msg, stringDate);
+
                 }
                 return;
             }
@@ -79,7 +91,7 @@ public class Server {
         return authService;
     }
 
-    public boolean isLoginAuthorized(String login){
+    public boolean isLoginAuthorized(String login) {
         for (ClientHandler c : clients) {
             if (c.getLogin().equals(login)) {
                 return true;
@@ -88,7 +100,7 @@ public class Server {
         return false;
     }
 
-    private void broadcastClientList() {
+    void broadcastClientList() {
         StringBuilder sb = new StringBuilder("/clientlist ");
 
         for (ClientHandler c : clients) {

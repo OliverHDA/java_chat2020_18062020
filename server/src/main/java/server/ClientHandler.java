@@ -1,5 +1,7 @@
 package server;
 
+import database.DatabaseConnection;
+
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
@@ -14,6 +16,7 @@ public class ClientHandler {
 
     private String nick;
     private String login;
+    private String password;
 
     public ClientHandler(Server server, Socket socket) {
         this.server = server;
@@ -38,9 +41,7 @@ public class ClientHandler {
                                 continue;
                             }
 
-                            boolean succeed = server
-                                    .getAuthService()
-                                    .registration(token[1], token[2], token[3]);
+                            boolean succeed = DatabaseConnection.createNewUser(token[1], token[2], token[3]);
                             if (succeed) {
                                 sendMsg("Регистрация прошла успешно");
                             } else {
@@ -56,17 +57,17 @@ public class ClientHandler {
                                 continue;
                             }
 
-                            String newNick = server.getAuthService()
-                                    .getNicknameByLoginAndPassword(token[1], token[2]);
-
                             login = token[1];
+                            password = token[2];
+                            String newNick = DatabaseConnection.getNickname(login);
+
 
                             if (newNick != null) {
-                                if (!server.isLoginAuthorized(login)) {
+                                if (DatabaseConnection.checkAuthorization(login, password) && !server.isLoginAuthorized(login)) {
                                     sendMsg("/authok " + newNick);
                                     nick = newNick;
                                     server.subscribe(this);
-                                    System.out.println("Клиент: " + nick + " подключился"+ socket.getRemoteSocketAddress());
+                                    System.out.println("Клиент: " + nick + " подключился" + socket.getRemoteSocketAddress());
                                     socket.setSoTimeout(0);
                                     break;
                                 } else {
@@ -81,11 +82,18 @@ public class ClientHandler {
                     //цикл работы
                     while (true) {
                         String str = in.readUTF();
+                        System.out.println(str);
 
                         if (str.startsWith("/")) {
                             if (str.equals("/end")) {
                                 sendMsg("/end");
                                 break;
+                            }
+                            if (str.startsWith("/changeNick")) {
+                                String[] newNickname = str.split(" ");
+                                DatabaseConnection.changeNick(login, newNickname[1]);
+                                setNick(newNickname[1]);
+                                server.broadcastClientList();
                             }
                             if (str.startsWith("/w ")) {
                                 String[] token = str.split(" ", 3);
@@ -93,14 +101,14 @@ public class ClientHandler {
                                 if (token.length < 3) {
                                     continue;
                                 }
-
                                 server.privateMsg(this, token[1], token[2]);
                             }
                         } else {
                             server.broadcastMsg(nick, str);
                         }
+
                     }
-                }catch (SocketTimeoutException e){
+                } catch (SocketTimeoutException e) {
                     sendMsg("/end");
                 }
                 ///////
@@ -137,5 +145,9 @@ public class ClientHandler {
 
     public String getLogin() {
         return login;
+    }
+
+    public void setNick(String nick) {
+        this.nick = nick;
     }
 }
