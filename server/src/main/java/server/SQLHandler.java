@@ -18,8 +18,21 @@ public class SQLHandler {
             e.printStackTrace();
             return false;
         }
-
     }
+    public static void disconnect() {
+        try {
+            psGetNickname.close();
+            psRegistration.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        try {
+            connection.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     private static void prepareAllStatement() throws SQLException {
         psGetNickname = connection.prepareStatement("SELECT nickname FROM users WHERE login = ? AND password = ?;");
