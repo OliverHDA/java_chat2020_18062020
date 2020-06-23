@@ -14,7 +14,11 @@ public class Server {
 
     public Server() {
         clients = new Vector<>();
-        authService = new SimpleAuthService();
+
+        if (!SQLHandler.connect()) {
+            throw new RuntimeException("Не удалось подключиться к БД");
+        }
+        authService = new DatabaseAuthService();
         ServerSocket server = null;
         Socket socket;
 
